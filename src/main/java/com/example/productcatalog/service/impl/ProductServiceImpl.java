@@ -16,30 +16,30 @@ import java.math.BigDecimal;
 @Service
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
-    
+
     private final ProductRepository productRepository;
-    
+
     @Override
     @Transactional
     public Product createProduct(Product product) {
         return productRepository.save(product);
     }
-    
+
     @Override
     @Transactional
     public Product updateProduct(String id, Product product) {
         Product existingProduct = getProduct(id);
-        
+
         existingProduct.setName(product.getName());
         existingProduct.setDescription(product.getDescription());
         existingProduct.setPrice(product.getPrice());
         existingProduct.setCategory(product.getCategory());
         existingProduct.setSku(product.getSku());
         existingProduct.setStockQuantity(product.getStockQuantity());
-        
+
         return productRepository.save(existingProduct);
     }
-    
+
     @Override
     @Transactional
     public void deleteProduct(String id) {
@@ -48,39 +48,41 @@ public class ProductServiceImpl implements ProductService {
         }
         productRepository.deleteById(id);
     }
-    
+
     @Override
     public Product getProduct(String id) {
         return productRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + id));
     }
-    
+
     @Override
-    public Page<Product> searchProducts(String name, String category, 
-                                      BigDecimal minPrice, BigDecimal maxPrice, 
-                                      Pageable pageable) {
+    public Page<Product> searchProducts(String name, String category,
+                                        BigDecimal minPrice, BigDecimal maxPrice,
+                                        Pageable pageable) {
         Specification<Product> spec = Specification.where(null);
-        
+
         if (name != null && !name.isEmpty()) {
-            spec = spec.and((root, query, cb) -> 
-                cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%"));
+            // Flexível: busca por qualquer parte do nome (não exige correspondência exata)
+            spec = spec.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%"));
         }
-        
+
         if (category != null && !category.isEmpty()) {
-            spec = spec.and((root, query, cb) -> 
-                cb.equal(root.get("category"), category));
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("category"), category));
         }
-        
+
         if (minPrice != null) {
-            spec = spec.and((root, query, cb) -> 
-                cb.greaterThanOrEqualTo(root.get("price"), minPrice));
+            spec = spec.and((root, query, cb) ->
+                    cb.greaterThanOrEqualTo(root.get("price"), minPrice));
         }
-        
+
         if (maxPrice != null) {
-            spec = spec.and((root, query, cb) -> 
-                cb.lessThanOrEqualTo(root.get("price"), maxPrice));
+            spec = spec.and((root, query, cb) ->
+                    cb.lessThanOrEqualTo(root.get("price"), maxPrice));
         }
-        
+
+        // Retorna a busca paginada com as especificações definidas
         return productRepository.findAll(spec, pageable);
     }
 }
